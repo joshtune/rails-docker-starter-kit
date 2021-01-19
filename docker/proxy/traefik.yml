@@ -1,0 +1,20 @@
+api:
+  insecure: true
+  debug: true
+
+entryPoints:
+  web:
+    address: :80
+
+  web-secure:
+    address: :443
+
+log:
+  level: INFO
+
+providers:
+  docker:
+    exposedByDefault: false
+
+  file:
+    filename: /etc/traefik/dynamic_config.yml

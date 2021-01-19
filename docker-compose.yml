@@ -1,0 +1,49 @@
+version: '3.7'
+
+services:
+  app:
+    build: .
+    depends_on:
+      - postgres
+      - proxy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/rdskit?encoding=unicode&pool=5&timeout=5000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.entryPoints=web
+      - traefik.http.routers.app.middlewares=secureRedirect@file
+      - traefik.http.routers.app.rule=Host(`rdskit.localhost`)
+      - traefik.http.routers.app-secured.entryPoints=web-secure
+      - traefik.http.routers.app-secured.rule=Host(`rdskit.localhost`)
+      - traefik.http.routers.app-secured.tls=true
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/srv/app:cached
+      - ./public:/srv/app/public:cached
+      - type: tmpfs
+        target: /srv/app/tmp/pids/
+
+  postgres:
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    image: postgres:12-alpine
+    ports:
+      - 5432:5432
+    restart: always
+    volumes:
+      - ./tmp/data/postgresql:/var/lib/postgresql/data
+
+  proxy:
+    image: traefik:v2.3
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/proxy/traefik.yml:/etc/traefik/traefik.yml
+      - ./docker/proxy/dynamic_config.yml:/etc/traefik/dynamic_config.yml
+      - ./docker/proxy/certs/server.crt:/etc/ssl/server.crt
+      - ./docker/proxy/certs/server.key:/etc/ssl/server.key
